@@ -120,15 +120,26 @@ No single channel is trustworthy; the *result* is convergence across channels.
 
 The 2023 stack is brittle: Python 3.9.12, `openai==0.27` (incompatible with the current SDK), Django 2.2, Selenium/Phaser frontend. The frontend is pure visualization — **the backend runs headless.** Every cognitive function is a separately-callable Python function with all state on-disk as JSON, so instrumentation is tractable.
 
-**Phase 0 tasks (high level — detailed in the implementation plan):**
-1. Fork the repo; pin a reproducible environment.
-2. Port the model client to a modern SDK; route generation + embeddings to the chosen model (Opus 4.8).
+### 6.1 Model & provider layer
+Smallville already speaks the OpenAI API shape, so the model client is a **provider-agnostic, OpenAI-compatible wrapper** with configurable `base_url` + model. This makes "TokensPLS vs. direct API" a config flag, not a code change, and hedges reproducibility against a model being retired mid-study.
+
+- **Chat/generation → TokensPLS ("HopGPT")** — the existing browser-driven, OpenAI-compatible proxy onto JHU-hosted models (`POST /v1/chat/completions`). **Phase-1 agent model: `gpt-5.4` (full)** — the most battle-tested tier through the proxy, and GPT-family (closer to the validated GPT-3.5 than a cross-family swap). Opus 4.x / Sonnet 4.x are **not** serveable (JHU retired them 2026-05-22); only `claude-haiku-4.5` remains on the Claude side.
+- **Embeddings → a separate external provider, wired directly** (TokensPLS has no embeddings route). Default: OpenAI `text-embedding-3-small` (close to Smallville's original ada-002 retrieval). The memory-stream retrieval depends on this.
+- **Escape hatch:** the same wrapper can point `base_url` at a direct paid API (budget is open) if Phase-1 wall-clock/reliability or a model retirement demands it. The Phase-2 provider is decided from Phase-1 data.
+
+**Two TokensPLS modifications likely required (the "modify that" work):**
+1. **Raw/passthrough mode** — by default the proxy flattens multi-message prompts into a single string and strips `User:/Assistant:` turns (`strip_hallucinated_turns`), which can corrupt Smallville's structured prompts and output parsing. We need a mode that preserves the messages array verbatim.
+2. **Context-limit headroom** — a ~30K cap is documented (Claude tiers); verify the `gpt-5.4` limit and ensure long Smallville prompts (persona + retrieved memories + reflection) aren't silently clamped.
+
+### 6.2 Phase 0 tasks (high level — detailed in the implementation plan)
+1. Fork `generative_agents`; pin a reproducible environment.
+2. Replace the legacy `openai==0.27` calls with the provider-agnostic OpenAI-compatible client (§6.1); point chat at TokensPLS/`gpt-5.4`, embeddings at the external provider.
 3. Run the backend headless (no Phaser/Selenium) for a 2-agent base scenario.
-4. Add instrumentation hooks: per-tick logging of relationship summaries, reflection nodes keyed to the partner, transcripts, post-convo memos, and behavioral events to structured logs.
-5. Add the persona-generation pipeline (trait vector → symmetric perturbation → length-matched ISS render → manipulation-check metrics).
-6. Add the maximal conflict affordances as world actions.
-7. Add the measurement layer (private-reflection probe with strict per-agent isolation; blind judge; signature computations).
-8. Use the Batches API for generation + judging where async is acceptable.
+4. Verify/contribute the TokensPLS raw-passthrough mode + confirm context headroom (§6.1).
+5. Add instrumentation hooks: per-tick logging of relationship summaries, reflection nodes keyed to the partner, transcripts, post-convo memos, and behavioral events to structured logs.
+6. Add the persona-generation pipeline (trait vector → symmetric perturbation → length-matched ISS render → manipulation-check metrics).
+7. Add the maximal conflict affordances as world actions.
+8. Add the measurement layer (private-reflection probe with strict per-agent isolation; blind judge; signature computations).
 
 ---
 
@@ -141,7 +152,7 @@ The 2023 stack is brittle: Python 3.9.12, `openai==0.27` (incompatible with the 
 | **Effect-size overshoot / caricature** | LLM sims exaggerate effects and miss variance/skew | Report **direction with magnitude discounted**; never claim human-magnitude fidelity |
 | **Privacy/isolation leakage** | "Latent/private" feelings are only meaningful if the private channel is *actually* private | Strict per-agent context isolation; deliver reflection probes as operator/system messages on the agent's own history; **programmatic isolation audit** that fails any leaked run |
 | **Unvalidated judge / influence-convergence confound** | A primed judge over-reads rivalry; agents may merely drift to agreement | Blind + human-validated judge; model `round` explicitly to separate developing-rivalry from generic convergence |
-| **Model-version validation gap** | Smallville was validated on GPT-3.5 for *believability/prosocial emergence*, never for rivalry | Use the validated *architecture*; treat the model swap as standard practice; optional GPT-class fidelity arm if a reviewer demands it; a **null is scientifically meaningful**, not a failure |
+| **Model-version & proxy-fidelity gap** | Smallville was validated on GPT-3.5 for *believability/prosocial emergence*, never for rivalry; we run `gpt-5.4` through a lossy browser proxy | Use the validated *architecture*; `gpt-5.4` keeps us in the **GPT family** (closer to the validated GPT-3.5 than a cross-family swap); add the TokensPLS **raw-passthrough mode** so the proxy doesn't alter prompts; a **null is scientifically meaningful**, not a failure |
 
 ---
 
@@ -160,7 +171,8 @@ The 2023 stack is brittle: Python 3.9.12, `openai==0.27` (incompatible with the 
 
 | Knob | Default |
 |------|---------|
-| **Model** | Opus 4.8 (best at sustained characterization; deviates from validated GPT-3.5 — optional fidelity arm) |
+| **Chat model / provider** | `gpt-5.4` (full) via TokensPLS; provider-agnostic client with a direct-API escape hatch |
+| **Embeddings** | External provider, wired directly (default OpenAI `text-embedding-3-small`); not via TokensPLS |
 | **Similarity ladder** | 5 levels, δ ∈ {0, 0.15, 0.35, 0.6, 0.9} |
 | **N per level (Phase 2)** | 20–40 dyads/level |
 | **Horizon** | ~3 sim-days (test run); tune from there |
