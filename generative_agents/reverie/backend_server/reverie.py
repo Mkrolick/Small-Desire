@@ -28,8 +28,6 @@ import os
 import shutil
 import traceback
 
-from selenium import webdriver
-
 from global_methods import *
 from utils import *
 from maze import *
@@ -132,9 +130,12 @@ class ReverieServer:
       self.maze.tiles[p_y][p_x]["events"].add(curr_persona.scratch
                                               .get_curr_event_and_desc())
 
-    # REVERIE SETTINGS PARAMETERS:  
+    # Headless: game-object cleanup state carried across process_step calls.
+    self._game_obj_cleanup = dict()
+
+    # REVERIE SETTINGS PARAMETERS:
     # <server_sleep> denotes the amount of time that our while loop rests each
-    # cycle; this is to not kill our machine. 
+    # cycle; this is to not kill our machine.
     self.server_sleep = 0.1
 
     # SIGNALING THE FRONTEND SERVER: 
@@ -276,9 +277,51 @@ class ReverieServer:
       time.sleep(self.server_sleep * 10)
 
 
-  def start_server(self, int_counter): 
+  def process_step(self, new_env):
+    """Headless single step. `new_env` is {name: {"x":int,"y":int}} (the dict the
+    frontend would have written). Advances one tick, writes movement/<step>.json,
+    returns the movements dict. Body lifted verbatim from start_server's loop."""
+    sim_folder = f"{fs_storage}/{self.sim_code}"
+
+    for key, val in self._game_obj_cleanup.items():
+      self.maze.turn_event_from_tile_idle(key, val)
+    self._game_obj_cleanup = dict()
+
+    for persona_name, persona in self.personas.items():
+      curr_tile = self.personas_tile[persona_name]
+      new_tile = (new_env[persona_name]["x"], new_env[persona_name]["y"])
+      self.personas_tile[persona_name] = new_tile
+      self.maze.remove_subject_events_from_tile(persona.name, curr_tile)
+      self.maze.add_event_from_tile(persona.scratch.get_curr_event_and_desc(), new_tile)
+      if not persona.scratch.planned_path:
+        self._game_obj_cleanup[persona.scratch.get_curr_obj_event_and_desc()] = new_tile
+        self.maze.add_event_from_tile(persona.scratch.get_curr_obj_event_and_desc(), new_tile)
+        blank = (persona.scratch.get_curr_obj_event_and_desc()[0], None, None, None)
+        self.maze.remove_event_from_tile(blank, new_tile)
+
+    movements = {"persona": dict(), "meta": dict()}
+    for persona_name, persona in self.personas.items():
+      next_tile, pronunciatio, description = persona.move(
+          self.maze, self.personas, self.personas_tile[persona_name], self.curr_time)
+      movements["persona"][persona_name] = {
+          "movement": next_tile,
+          "pronunciatio": pronunciatio,
+          "description": description,
+          "chat": persona.scratch.chat,
+      }
+    movements["meta"]["curr_time"] = self.curr_time.strftime("%B %d, %Y, %H:%M:%S")
+
+    os.makedirs(f"{sim_folder}/movement", exist_ok=True)
+    with open(f"{sim_folder}/movement/{self.step}.json", "w") as outfile:
+      outfile.write(json.dumps(movements, indent=2))
+
+    self.step += 1
+    self.curr_time += datetime.timedelta(seconds=self.sec_per_step)
+    return movements
+
+  def start_server(self, int_counter):
     """
-    The main backend server of Reverie. 
+    The main backend server of Reverie.
     This function retrieves the environment file from the frontend to 
     understand the state of the world, calls on each personas to make 
     decisions based on the world state, and saves their moves at certain step
