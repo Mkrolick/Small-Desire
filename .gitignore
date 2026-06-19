@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# Per-run sim outputs (keep only base_* sims under version control)
+generative_agents/environment/frontend_server/storage/*
+!generative_agents/environment/frontend_server/storage/base_*
+
+# Backend writes signaling files here at runtime
+generative_agents/environment/frontend_server/temp_storage/*.json
