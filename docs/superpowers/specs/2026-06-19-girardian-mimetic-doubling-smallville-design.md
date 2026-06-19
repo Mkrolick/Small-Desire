@@ -78,6 +78,9 @@ This is the falsifiability guard. It is not present because we believe homophily
 - Same-house held constant; maximal scaffolding.
 - Full measurement battery; mixed-effects dose-response analysis.
 
+### 3.5 Implementation scoping
+This spec is intentionally larger than one implementation plan. **The first implementation plan covers Phase 0 + Phase 1 only** — stand up the instrumented substrate and run the two-pair existence probe. **Phase 2 is a separate planning cycle**, gated on Phase 1, because its design (power/N, tuned protocol, pre-registration) depends on the pilot variance and the tuned probes that Phase 1 produces. Planning Phase 2 in detail now would be guessing.
+
 ---
 
 ## 4. Substrate & Architecture
