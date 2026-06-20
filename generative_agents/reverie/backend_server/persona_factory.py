@@ -4,6 +4,8 @@ identity distance delta (the experiment's IV). Deterministic per seed.
 import hashlib
 import math
 
+from persona.prompt_template import provider_client
+
 TRAITS = ["warmth", "ambition", "dominance", "agreeableness",
           "conscientiousness", "openness", "sociability", "volatility"]
 
@@ -86,4 +88,33 @@ def render_iss(traits, name, house, living_area, vocation):
         "living_area": living_area,
         "daily_plan_req": (f"{first} shares {house} with a housemate and spends the day "
                            f"around the Ville pursuing work as a {vocation}."),
+    }
+
+
+def _iss_text(iss):
+    """Flatten the trait-driven ISS fields into one string for embedding."""
+    return " ".join(str(iss[k]) for k in ("innate", "learned", "currently", "lifestyle"))
+
+
+def embedding_distance(iss_a, iss_b):
+    """Cosine distance (1 - cos sim) between the two rendered personas' embeddings.
+    Clamped to [0.0, 1.0] to absorb floating-point rounding for identical inputs."""
+    va = provider_client.get_embedding(_iss_text(iss_a))
+    vb = provider_client.get_embedding(_iss_text(iss_b))
+    dot = sum(x * y for x, y in zip(va, vb))
+    na = math.sqrt(sum(x * x for x in va)) or 1.0
+    nb = math.sqrt(sum(y * y for y in vb)) or 1.0
+    return max(0.0, 1.0 - dot / (na * nb))
+
+
+def manipulation_check(seed_id, delta, name_a, name_b, house, living_area, vocation):
+    """Return designed delta, realized trait distance, and embedding distance for a pair."""
+    a, b = perturb(seed_id, delta)
+    ctx = dict(house=house, living_area=living_area, vocation=vocation)
+    ia = render_iss(a, name=name_a, **ctx)
+    ib = render_iss(b, name=name_b, **ctx)
+    return {
+        "designed_delta": delta,
+        "trait_distance": trait_distance(a, b),
+        "embedding_distance": embedding_distance(ia, ib),
     }

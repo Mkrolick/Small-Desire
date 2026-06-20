@@ -72,3 +72,26 @@ def test_render_iss_delta_zero_identical_except_name():
     ia = pf.render_iss(a, name="Ada Rivera", **ctx)
     ib = pf.render_iss(b, name="Ada Rivera", **ctx)
     assert ia == ib
+
+
+def test_embedding_distance_and_manipulation_check(monkeypatch):
+    import hashlib
+
+    def fake_embed(text):
+        h = hashlib.sha256(text.encode()).digest()
+        return [b / 255.0 for b in h[:6]]
+
+    monkeypatch.setattr(pf.provider_client, "get_embedding", fake_embed)
+
+    a, b = pf.perturb("house-rivera", 0.0)
+    ctx = dict(house="the Rivera household",
+               living_area="the Ville:Rivera household:main room", vocation="barista")
+    ia = pf.render_iss(a, name="Ada Rivera", **ctx)
+    ib = pf.render_iss(b, name="Ada Rivera", **ctx)
+    assert pf.embedding_distance(ia, ib) == 0.0
+
+    chk = pf.manipulation_check("house-rivera", 0.6,
+                                name_a="Ada Rivera", name_b="Bea Rivera", **ctx)
+    assert set(chk.keys()) >= {"designed_delta", "trait_distance", "embedding_distance"}
+    assert chk["designed_delta"] == 0.6
+    assert chk["trait_distance"] > 0.0
