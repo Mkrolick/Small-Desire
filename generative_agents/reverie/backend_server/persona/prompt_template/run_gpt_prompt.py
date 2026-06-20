@@ -54,7 +54,8 @@ def run_gpt_prompt_wake_up_hour(persona, test_input=None, verbose=False):
     return prompt_input
 
   def __func_clean_up(gpt_response, prompt=""):
-    cr = int(gpt_response.strip().lower().split("am")[0])
+    m = re.search(r"\d{1,2}", gpt_response)
+    cr = int(m.group()) if m else 8
     return cr
   
   def __func_validate(gpt_response, prompt=""): 
@@ -113,8 +114,9 @@ def run_gpt_prompt_daily_plan(persona,
   def __func_clean_up(gpt_response, prompt=""):
     cr = []
     _cr = gpt_response.split(")")
-    for i in _cr: 
-      if i[-1].isdigit(): 
+    for i in _cr:
+      if not i.strip(): continue
+      if i[-1].isdigit():
         i = i[:-1].strip()
         if i[-1] == "." or i[-1] == ",": 
           cr += [i[:-1].strip()]
@@ -375,7 +377,7 @@ def run_gpt_prompt_task_decomp(persona,
       task = k[0]
       if task[-1] == ".": 
         task = task[:-1]
-      duration = int(k[1].split(",")[0].strip())
+      m = re.search(r"\d+", k[1].split(",")[0]); duration = int(m.group()) if m else 0
       cr += [[task, duration]]
 
     total_expected_min = int(prompt.split("(total duration in minutes")[-1]
@@ -394,8 +396,8 @@ def run_gpt_prompt_task_decomp(persona,
           curr_min_slot += [(i_task, count)]       
     curr_min_slot = curr_min_slot[1:]   
 
-    if len(curr_min_slot) > total_expected_min: 
-      last_task = curr_min_slot[60]
+    if len(curr_min_slot) > total_expected_min:
+      last_task = curr_min_slot[60] if len(curr_min_slot) > 60 else (curr_min_slot[-1] if curr_min_slot else "")
       for i in range(1, 6): 
         curr_min_slot[-1 * i] = last_task
     elif len(curr_min_slot) < total_expected_min: 
@@ -413,13 +415,12 @@ def run_gpt_prompt_task_decomp(persona,
 
     return cr
 
-  def __func_validate(gpt_response, prompt=""): 
-    # TODO -- this sometimes generates error 
-    try: 
+  def __func_validate(gpt_response, prompt=""):
+    # TODO -- this sometimes generates error
+    try:
       __func_clean_up(gpt_response)
-    except: 
-      pass
-      # return False
+    except:
+      return False
     return gpt_response
 
   def get_fail_safe(): 
@@ -470,7 +471,8 @@ def run_gpt_prompt_task_decomp(persona,
     ftime_sum += fi_duration
   
   # print ("for debugging... line 365", fin_output)
-  fin_output[-1][1] += (duration - ftime_sum)
+  if fin_output:
+    fin_output[-1][1] += (duration - ftime_sum)
   output = fin_output 
 
 
@@ -885,17 +887,19 @@ def run_gpt_prompt_event_triple(action_description, persona, verbose=False):
   def __func_clean_up(gpt_response, prompt=""):
     cr = gpt_response.strip()
     cr = [i.strip() for i in cr.split(")")[0].split(",")]
+    cr = [x.strip().lstrip("(").strip() for x in cr]
+    cr = cr[-2:] if len(cr) >= 2 else cr
     return cr
 
-  def __func_validate(gpt_response, prompt=""): 
-    try: 
+  def __func_validate(gpt_response, prompt=""):
+    try:
       gpt_response = __func_clean_up(gpt_response, prompt="")
-      if len(gpt_response) != 2: 
+      if len(gpt_response) != 2:
         return False
     except: return False
-    return True 
+    return True
 
-  def get_fail_safe(persona): 
+  def get_fail_safe(persona):
     fs = (persona.name, "is", "idle")
     return fs
 
@@ -1052,17 +1056,19 @@ def run_gpt_prompt_act_obj_event_triple(act_game_object, act_obj_desc, persona, 
   def __func_clean_up(gpt_response, prompt=""):
     cr = gpt_response.strip()
     cr = [i.strip() for i in cr.split(")")[0].split(",")]
+    cr = [x.strip().lstrip("(").strip() for x in cr]
+    cr = cr[-2:] if len(cr) >= 2 else cr
     return cr
 
-  def __func_validate(gpt_response, prompt=""): 
-    try: 
+  def __func_validate(gpt_response, prompt=""):
+    try:
       gpt_response = __func_clean_up(gpt_response, prompt="")
-      if len(gpt_response) != 2: 
+      if len(gpt_response) != 2:
         return False
     except: return False
-    return True 
+    return True
 
-  def get_fail_safe(act_game_object): 
+  def get_fail_safe(act_game_object):
     fs = (act_game_object, "is", "idle")
     return fs
 
@@ -1145,8 +1151,9 @@ def run_gpt_prompt_new_decomp_schedule(persona,
     new_schedule = new_schedule.split("\n")
 
     ret_temp = []
-    for i in new_schedule: 
-      ret_temp += [i.split(" -- ")]
+    for i in new_schedule:
+      seg = i.split(" -- ")
+      ret_temp += [seg] if len(seg) == 2 else []
 
     ret = []
     for time_str, action in ret_temp:
@@ -1303,18 +1310,17 @@ def run_gpt_prompt_decide_to_talk(persona, target_persona, retrieved,test_input=
     prompt_input += [target_persona.name]
     return prompt_input
   
-  def __func_validate(gpt_response, prompt=""): 
-    try: 
-      if gpt_response.split("Answer in yes or no:")[-1].strip().lower() in ["yes", "no"]: 
-        return True
-      return False     
+  def __func_validate(gpt_response, prompt=""):
+    try:
+      return bool(re.search(r"\b(yes|no)\b", gpt_response, re.IGNORECASE))
     except:
-      return False 
+      return False
 
   def __func_clean_up(gpt_response, prompt=""):
-    return gpt_response.split("Answer in yes or no:")[-1].strip().lower()
+    m = re.search(r"\b(yes|no)\b", gpt_response, re.IGNORECASE)
+    return m.group(1).lower() if m else "yes"
 
-  def get_fail_safe(): 
+  def get_fail_safe():
     fs = "yes"
     return fs
 
@@ -1402,18 +1408,24 @@ def run_gpt_prompt_decide_to_react(persona, target_persona, retrieved,test_input
     prompt_input += [init_act_desc]
     return prompt_input
   
-  def __func_validate(gpt_response, prompt=""): 
-    try: 
-      if gpt_response.split("Answer: Option")[-1].strip().lower() in ["3", "2", "1"]: 
-        return True
-      return False     
+  def _extract_option(gpt_response):
+    slice_ = gpt_response.split("Answer: Option")[-1]
+    m = re.search(r"[123]", slice_)
+    if m:
+      return m.group()
+    m2 = re.search(r"[123]", gpt_response)
+    return m2.group() if m2 else "3"
+
+  def __func_validate(gpt_response, prompt=""):
+    try:
+      return _extract_option(gpt_response) in {"1", "2", "3"}
     except:
-      return False 
+      return False
 
   def __func_clean_up(gpt_response, prompt=""):
-    return gpt_response.split("Answer: Option")[-1].strip().lower() 
+    return _extract_option(gpt_response)
 
-  def get_fail_safe(): 
+  def get_fail_safe():
     fs = "3"
     return fs
 
@@ -1534,17 +1546,18 @@ def run_gpt_prompt_create_conversation(persona, target_persona, curr_loc,
 
 
     gpt_response = (prompt + gpt_response).split("What would they talk about now?")[-1].strip()
-    content = re.findall('"([^"]*)"', gpt_response)
+    content = re.findall(r'["“”\'"]([^"\'"“”]+)["“”\'"]', gpt_response)
 
     speaker_order = []
-    for i in gpt_response.split("\n"): 
-      name = i.split(":")[0].strip() 
-      if name: 
+    for i in gpt_response.split("\n"):
+      name = i.split(":")[0].strip()
+      if name:
         speaker_order += [name]
 
     ret = []
-    for count, speaker in enumerate(speaker_order): 
-      ret += [[speaker, content[count]]]
+    for count, speaker in enumerate(speaker_order):
+      if count < len(content):
+        ret += [[speaker, content[count]]]
 
     return ret
 
@@ -1672,9 +1685,9 @@ def run_gpt_prompt_extract_keywords(persona, description, test_input=None, verbo
   def __func_clean_up(gpt_response, prompt=""):
     print ("???")
     print (gpt_response)
-    gpt_response = gpt_response.strip().split("Emotive keywords:")
-    factual = [i.strip() for i in gpt_response[0].split(",")]
-    emotive = [i.strip() for i in gpt_response[1].split(",")]
+    parts = re.split(r"[Ee]motive [Kk]eywords:", gpt_response.strip())
+    factual = [i.strip() for i in parts[0].split(",")]
+    emotive = [i.strip() for i in parts[1].split(",")] if len(parts) > 1 else []
     all_keywords = factual + emotive
     ret = []
     for i in all_keywords: 
@@ -2149,8 +2162,9 @@ def run_gpt_prompt_insight_and_guidance(persona, statements, n, test_input=None,
     ret = dict()
     for i in gpt_response.split("\n"): 
       row = i.split(". ")[-1]
-      thought = row.split("(because of ")[0].strip()
-      evi_raw = row.split("(because of ")[1].split(")")[0].strip()
+      parts = row.split("(because of ")
+      thought = parts[0].strip()
+      evi_raw = parts[1].split(")")[0].strip() if len(parts) > 1 else ""
       evi_raw = re.findall(r'\d+', evi_raw)
       evi_raw = [int(i.strip()) for i in evi_raw]
       ret[thought] = evi_raw
@@ -2377,17 +2391,18 @@ def run_gpt_prompt_agent_chat(maze, persona, target_persona,
     print (gpt_response)
 
     gpt_response = (prompt + gpt_response).split("Here is their conversation.")[-1].strip()
-    content = re.findall('"([^"]*)"', gpt_response)
+    content = re.findall(r'["“”\'"]([^"\'"“”]+)["“”\'"]', gpt_response)
 
     speaker_order = []
-    for i in gpt_response.split("\n"): 
-      name = i.split(":")[0].strip() 
-      if name: 
+    for i in gpt_response.split("\n"):
+      name = i.split(":")[0].strip()
+      if name:
         speaker_order += [name]
 
     ret = []
-    for count, speaker in enumerate(speaker_order): 
-      ret += [[speaker, content[count]]]
+    for count, speaker in enumerate(speaker_order):
+      if count < len(content):
+        ret += [[speaker, content[count]]]
 
     return ret
 
