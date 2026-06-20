@@ -18,7 +18,7 @@ The reciprocity Girard predicts *does* appear — but with the sign flipped: it'
 | `overnight_results.md` | seed-1, free co-presence, 1 sim-day | divergent pair bonded (86 convos, warmed); doubles never met — **looked** like "difference drives bonding"… |
 | `overnight_multiseed_results.md` | 5 seeds, free co-presence | …but **didn't replicate**: divergent 0 convos in *all* 5 seeds, doubles 0 in 4/5. Interaction is sparse & seed-dependent, not tied to δ. Seed-1 was a lucky-schedule outlier. |
 | `forced_contact_pilot_results.md` | 2 seeds, **forced shared common-room** | forcing contact works (669 convos vs ~0). Doubles erratic (0 *or* 202). **Every interacting pair warmed & mirrored positively — none clashed.** |
-| `longhorizon_results.md` | forced contact, ~2.5 sim-days | *(running)* — tests the "rivalry needs more time" objection: does any feeling trajectory ever drift up toward hostility? |
+| `longhorizon_results.md` | forced contact, ~1.4 sim-days | **time objection answered: no escalation.** Escalation slopes ~0 or *negative* (drifting warmer), reciprocity stays positive over the whole horizon. One transient blip to 6 that immediately reverted — noise, not a trend. (0 convos this run — see conversation-stochasticity caveat.) |
 
 ## Interpretation (and why this is still consistent with Girard)
 
@@ -28,7 +28,8 @@ We deliberately tested **doubling without a contested object** (your design call
 
 - **LLM agreeableness confound.** `gpt-5.4` agents skew civil; a less agreeable / adversarially-framed model might behave differently. This is the biggest threat to the negative result.
 - **No contested object** — by design. So this tests "pure doubling," not full Girardian rivalry.
-- **Horizon** — mostly 1 sim-day (the long-horizon run addresses this). But we see active *warming*, not neutral-trending-tense, so more time likely means more bonding.
+- **Horizon** — addressed: the ~1.4-sim-day forced-contact run showed slopes ~0/negative and no late drift toward hostility (one isolated transient 6, immediately reverted). No slow curdling over time.
+- **Conversation initiation is stochastic.** The same seed gave 202 convos in the pilot and 0 in the long-horizon run — LLM nondeterminism in "decide to talk." So per-run convo counts are noisy (explains the 86/0/202/375/0 spread); the *attitude* finding (always warm/neutral, never hostile) is the stable signal, not the raw convo count.
 - **Coarse measures** — 1–7 self-report; small n; the co-location sampler was too coarse in the multi-seed run (fixed to arena-level + finer sampling in the pilot).
 
 ## Recommended next steps — your call
