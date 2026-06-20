@@ -57,3 +57,24 @@ def capture_new_reflections(persona, other_personas, log, step, curr_time, curso
                 })
                 break
     return len(seq)
+
+
+def capture_conversations(movements, log, step, curr_time):
+    """Log each non-empty conversation transcript once (both participants share
+    the same transcript object, so dedup by transcript content within the step)."""
+    seen = set()
+    persona_block = movements.get("persona", {})
+    for name, m in persona_block.items():
+        chat = m.get("chat")
+        if not chat:
+            continue
+        key = json.dumps(chat, sort_keys=True)
+        if key in seen:
+            continue
+        seen.add(key)
+        participants = [n for n, mm in persona_block.items()
+                        if json.dumps(mm.get("chat"), sort_keys=True) == key]
+        log.record("conversation", step, curr_time, {
+            "participants": participants,
+            "transcript": chat,
+        })

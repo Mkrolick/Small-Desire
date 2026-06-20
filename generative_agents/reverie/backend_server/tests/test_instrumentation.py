@@ -77,3 +77,37 @@ def test_capture_new_reflections_respects_cursor(monkeypatch):
     assert not os.path.exists(path)
     import shutil
     shutil.rmtree(f"{instrumentation.fs_storage}/{sim}", ignore_errors=True)
+
+
+def test_capture_conversations_logs_unique_transcripts():
+    sim = "test_capture_convo_unit"
+    log = instrumentation.MeasurementLog(sim)
+    convo = [["Isabella", "Hi Maria"], ["Maria", "Hi Isabella"]]
+    movements = {"persona": {
+        "Isabella Rodriguez": {"movement": [1, 2], "chat": convo},
+        "Maria Lopez": {"movement": [3, 4], "chat": convo},
+    }, "meta": {}}
+    instrumentation.capture_conversations(
+        movements, log, step=4, curr_time=__import__("datetime").datetime(2023, 2, 13, 0, 0, 40))
+    path = f"{instrumentation.fs_storage}/{sim}/measurements/conversation.jsonl"
+    lines = [__import__("json").loads(l) for l in open(path)]
+    assert len(lines) == 1
+    assert lines[0]["transcript"] == convo
+    assert sorted(lines[0]["participants"]) == ["Isabella Rodriguez", "Maria Lopez"]
+    import shutil
+    shutil.rmtree(f"{instrumentation.fs_storage}/{sim}", ignore_errors=True)
+
+
+def test_capture_conversations_ignores_none_chat():
+    sim = "test_capture_convo_none"
+    log = instrumentation.MeasurementLog(sim)
+    movements = {"persona": {
+        "Isabella Rodriguez": {"movement": [1, 2], "chat": None},
+        "Maria Lopez": {"movement": [3, 4], "chat": None},
+    }, "meta": {}}
+    instrumentation.capture_conversations(
+        movements, log, step=1, curr_time=__import__("datetime").datetime(2023, 2, 13, 0, 0, 10))
+    import os
+    assert not os.path.exists(f"{instrumentation.fs_storage}/{sim}/measurements/conversation.jsonl")
+    import shutil
+    shutil.rmtree(f"{instrumentation.fs_storage}/{sim}", ignore_errors=True)
