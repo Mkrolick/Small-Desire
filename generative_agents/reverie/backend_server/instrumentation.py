@@ -9,6 +9,8 @@ import json
 import os
 
 from utils import fs_storage
+from persona.cognitive_modules import converse
+from persona.cognitive_modules.retrieve import new_retrieve
 
 
 def _fmt_time(t):
@@ -78,3 +80,20 @@ def capture_conversations(movements, log, step, curr_time):
             "participants": participants,
             "transcript": chat,
         })
+
+
+def probe_relationships(personas, log, step, curr_time, n_retrieve=50):
+    """On-demand attitude DV: for each ordered pair (A,B), retrieve A's memories
+    about B and compute A's relationship summary, logging it with source='probe'.
+    This is the dense longitudinal signal (independent of whether they conversed)."""
+    names = list(personas.keys())
+    for a_name in names:
+        for b_name in names:
+            if a_name == b_name:
+                continue
+            a, b = personas[a_name], personas[b_name]
+            retrieved = new_retrieve(a, [b.scratch.name], n_retrieve)
+            summary = converse.generate_summarize_agent_relationship(a, b, retrieved)
+            log.record("relationship_summary", step, curr_time, {
+                "from": a_name, "to": b_name, "summary": summary, "source": "probe",
+            })

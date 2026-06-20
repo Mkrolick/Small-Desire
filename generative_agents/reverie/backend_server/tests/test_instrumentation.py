@@ -111,3 +111,34 @@ def test_capture_conversations_ignores_none_chat():
     assert not os.path.exists(f"{instrumentation.fs_storage}/{sim}/measurements/conversation.jsonl")
     import shutil
     shutil.rmtree(f"{instrumentation.fs_storage}/{sim}", ignore_errors=True)
+
+
+def test_probe_relationships_logs_each_ordered_pair(monkeypatch):
+    sim = "test_probe_unit"
+    log = instrumentation.MeasurementLog(sim)
+
+    def fake_new_retrieve(persona, focal_points, n_count=30):
+        return {focal_points[0]: []}
+
+    calls = []
+    def fake_summarize(a, b, retrieved):
+        calls.append((a.scratch.name, b.scratch.name))
+        return f"{a.scratch.name} thinks {b.scratch.name} is a rival"
+
+    monkeypatch.setattr(instrumentation, "new_retrieve", fake_new_retrieve)
+    monkeypatch.setattr(instrumentation.converse, "generate_summarize_agent_relationship", fake_summarize)
+
+    isabella = _fake_persona("Isabella Rodriguez", "Isabella", [])
+    maria = _fake_persona("Maria Lopez", "Maria", [])
+    personas = {"Isabella Rodriguez": isabella, "Maria Lopez": maria}
+    instrumentation.probe_relationships(
+        personas, log, step=6, curr_time=__import__("datetime").datetime(2023, 2, 13, 0, 1, 0))
+
+    assert set(calls) == {("Isabella Rodriguez", "Maria Lopez"), ("Maria Lopez", "Isabella Rodriguez")}
+    path = f"{instrumentation.fs_storage}/{sim}/measurements/relationship_summary.jsonl"
+    lines = [__import__("json").loads(l) for l in open(path)]
+    assert len(lines) == 2
+    assert all(l["source"] == "probe" for l in lines)
+    assert {(l["from"], l["to"]) for l in lines} == set(calls)
+    import shutil
+    shutil.rmtree(f"{instrumentation.fs_storage}/{sim}", ignore_errors=True)
