@@ -90,8 +90,7 @@ def test_embedding_distance_and_manipulation_check(monkeypatch):
     ib = pf.render_iss(b, name="Ada Rivera", **ctx)
     assert pf.embedding_distance(ia, ib) == 0.0
 
-    chk = pf.manipulation_check("house-rivera", 0.6,
-                                name_a="Ada Rivera", name_b="Bea Rivera", **ctx)
+    chk = pf.manipulation_check("house-rivera", 0.6, **ctx)
     assert set(chk.keys()) >= {"designed_delta", "trait_distance", "embedding_distance"}
     assert chk["designed_delta"] == 0.6
     assert chk["trait_distance"] > 0.0

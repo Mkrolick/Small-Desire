@@ -112,12 +112,14 @@ def embedding_distance(iss_a, iss_b):
     return max(0.0, 1.0 - dot / (na * nb))
 
 
-def manipulation_check(seed_id, delta, name_a, name_b, house, living_area, vocation):
-    """Return designed delta, realized trait distance, and embedding distance for a pair."""
+def manipulation_check(seed_id, delta, house, living_area, vocation):
+    """Designed delta, realized trait distance, and NAME-INVARIANT embedding
+    distance for a pair. Both personas are rendered with a shared canonical
+    name so the embedding distance reflects trait-driven identity only."""
     a, b = perturb(seed_id, delta)
     ctx = dict(house=house, living_area=living_area, vocation=vocation)
-    ia = render_iss(a, name=name_a, **ctx)
-    ib = render_iss(b, name=name_b, **ctx)
+    ia = render_iss(a, name="Persona X", **ctx)
+    ib = render_iss(b, name="Persona X", **ctx)
     return {
         "designed_delta": delta,
         "trait_distance": trait_distance(a, b),
