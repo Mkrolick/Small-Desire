@@ -76,10 +76,13 @@ def execute(persona, maze, personas, plan):
       y = int(plan.split()[2])
       target_tiles = [[x, y]]
 
-    elif "<random>" in plan: 
+    elif "<random>" in plan:
       # Executing a random location action.
       plan = ":".join(plan.split(":")[:-1])
-      target_tiles = maze.address_tiles[plan]
+      if plan in maze.address_tiles:
+        target_tiles = maze.address_tiles[plan]
+      else:
+        target_tiles = [persona.scratch.curr_tile]
       target_tiles = random.sample(list(target_tiles), 1)
 
     else: 

@@ -555,7 +555,7 @@ def run_gpt_prompt_action_sector(action_description,
 
 
   def __func_clean_up(gpt_response, prompt=""):
-    cleaned_response = gpt_response.split("}")[0].replace("{", "").strip()
+    cleaned_response = gpt_response.split("}")[0].replace("{", "").split(":")[-1].strip()
     return cleaned_response
 
   def __func_validate(gpt_response, prompt=""): 
@@ -685,7 +685,7 @@ def run_gpt_prompt_action_arena(action_description,
     return prompt_input
 
   def __func_clean_up(gpt_response, prompt=""):
-    cleaned_response = gpt_response.split("}")[0].replace("{", "").strip()
+    cleaned_response = gpt_response.split("}")[0].replace("{", "").split(":")[-1].strip()
     return cleaned_response
 
   def __func_validate(gpt_response, prompt=""): 
