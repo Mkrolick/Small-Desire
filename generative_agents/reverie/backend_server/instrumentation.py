@@ -7,10 +7,12 @@ modify the validated cognition.
 """
 import json
 import os
+import re
 
 from utils import fs_storage
 from persona.cognitive_modules import converse
 from persona.cognitive_modules.retrieve import new_retrieve
+from persona.prompt_template import provider_client
 
 
 def _fmt_time(t):
@@ -80,6 +82,55 @@ def capture_conversations(movements, log, step, curr_time):
             "participants": participants,
             "transcript": chat,
         })
+
+
+def _persona_iss(persona):
+    """The persona's identity block if available (real personas have get_str_iss)."""
+    getter = getattr(persona.scratch, "get_str_iss", None)
+    return getter() if callable(getter) else ""
+
+
+def _parse_feeling(text):
+    """Extract a 1-7 score and reason from a feeling response (gpt-5.4-safe).
+    Prefers the explicit 'SCORE: n | REASON: ...' format; falls back to the LAST
+    standalone 1-7 digit (the answer usually follows any restated scale).
+    Returns (score|None, reason)."""
+    m = re.search(r"SCORE:\s*([1-7])", text, re.IGNORECASE)
+    if m:
+        score = int(m.group(1))
+    else:
+        digits = re.findall(r"\b([1-7])\b", text)
+        score = int(digits[-1]) if digits else None
+    rm = re.search(r"REASON:\s*(.+)", text, re.IGNORECASE | re.DOTALL)
+    reason = (rm.group(1) if rm else text).strip()
+    return score, reason
+
+
+def probe_feelings(personas, log, step, curr_time, n_retrieve=30):
+    """Ask each agent, in character, how warm vs. hostile it feels toward the other
+    (1=warm .. 7=hostile) + why, via an LLM call. Logs a 'feeling' record per
+    ordered pair. This is the primary DV: the agent's self-reported attitude."""
+    names = list(personas.keys())
+    for a_name in names:
+        for b_name in names:
+            if a_name == b_name:
+                continue
+            a, b = personas[a_name], personas[b_name]
+            retrieved = new_retrieve(a, [b.scratch.name], n_retrieve)
+            context = "\n".join(node.embedding_key for nodes in retrieved.values() for node in nodes)
+            prompt = (
+                f"You are {a.scratch.name}. {_persona_iss(a)}\n"
+                f"Here is what you know and remember about {b.scratch.name}:\n{context}\n\n"
+                f"On a scale of 1 to 7, where 1 means warm and friendly and 7 means hostile "
+                f"and resentful, how do you genuinely feel about {b.scratch.name} right now?\n"
+                f"Respond in exactly this format and nothing else:\n"
+                f"SCORE: <a single number 1-7> | REASON: <one short sentence>"
+            )
+            resp = provider_client.chat_completion(prompt)
+            score, reason = _parse_feeling(resp)
+            log.record("feeling", step, curr_time, {
+                "from": a_name, "to": b_name, "score": score, "reason": reason, "raw": resp,
+            })
 
 
 def probe_relationships(personas, log, step, curr_time, n_retrieve=50):
