@@ -42,3 +42,48 @@ def perturb(seed_id, delta):
         a[t] = min(1.0, max(0.0, mid[t] + (delta / 2) * u[i]))
         b[t] = min(1.0, max(0.0, mid[t] - (delta / 2) * u[i]))
     return a, b
+
+
+# 5-bucket adjective banks per trait (value -> exactly one word; keeps renders length-matched).
+_BANKS = {
+    "warmth":            ["cold", "distant", "even", "kind", "warm"],
+    "ambition":          ["content", "easygoing", "steady", "driven", "relentless"],
+    "dominance":         ["yielding", "deferential", "balanced", "assertive", "commanding"],
+    "agreeableness":     ["combative", "skeptical", "fair", "agreeable", "accommodating"],
+    "conscientiousness": ["careless", "casual", "orderly", "diligent", "meticulous"],
+    "openness":          ["rigid", "conventional", "curious", "inventive", "visionary"],
+    "sociability":       ["solitary", "private", "sociable", "gregarious", "magnetic"],
+    "volatility":        ["serene", "calm", "measured", "tense", "volatile"],
+}
+
+
+def _adj(trait, value):
+    bank = _BANKS[trait]
+    idx = min(len(bank) - 1, int(value * len(bank)))
+    return bank[idx]
+
+
+def render_iss(traits, name, house, living_area, vocation):
+    """Render a trait vector to the scratch ISS identity fields, length-matched
+    (only single trait-derived words vary). Shared context fields are constant."""
+    first, _, last = name.partition(" ")
+    return {
+        "name": name,
+        "first_name": first,
+        "last_name": last or first,
+        "age": 28,
+        "innate": ", ".join([_adj("warmth", traits["warmth"]),
+                             _adj("dominance", traits["dominance"]),
+                             _adj("agreeableness", traits["agreeableness"]),
+                             _adj("volatility", traits["volatility"])]),
+        "learned": (f"{first} grew up in {house} and works as a {vocation}; "
+                    f"{first} is {_adj('ambition', traits['ambition'])} and "
+                    f"{_adj('conscientiousness', traits['conscientiousness'])}."),
+        "currently": (f"{first} is {_adj('openness', traits['openness'])} about new ideas "
+                      f"and feels {_adj('volatility', traits['volatility'])} lately."),
+        "lifestyle": (f"{first} is {_adj('sociability', traits['sociability'])}, "
+                      f"sleeps around 11pm and wakes around 7am."),
+        "living_area": living_area,
+        "daily_plan_req": (f"{first} shares {house} with a housemate and spends the day "
+                           f"around the Ville pursuing work as a {vocation}."),
+    }

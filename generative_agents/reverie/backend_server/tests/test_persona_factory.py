@@ -39,3 +39,36 @@ def test_perturb_deterministic():
 def test_perturb_distance_increases_with_delta():
     dists = [pf.trait_distance(*pf.perturb("house-okafor", d)) for d in (0.0, 0.2, 0.5, 0.9)]
     assert dists == sorted(dists)
+
+
+ISS_KEYS = {"name", "first_name", "last_name", "age", "innate", "learned",
+            "currently", "lifestyle", "living_area", "daily_plan_req"}
+
+
+def test_render_iss_has_all_keys_and_name():
+    a, b = pf.perturb("house-rivera", 0.4)
+    iss = pf.render_iss(a, name="Ada Rivera", house="the Rivera household",
+                        living_area="the Ville:Rivera household:main room",
+                        vocation="barista")
+    assert ISS_KEYS <= set(iss.keys())
+    assert iss["name"] == "Ada Rivera"
+    assert iss["first_name"] == "Ada" and iss["last_name"] == "Rivera"
+
+
+def test_render_iss_length_matched():
+    a, b = pf.perturb("house-rivera", 0.9)
+    ctx = dict(house="the Rivera household",
+               living_area="the Ville:Rivera household:main room", vocation="barista")
+    ia = pf.render_iss(a, name="Ada Rivera", **ctx)
+    ib = pf.render_iss(b, name="Bea Rivera", **ctx)
+    for k in ("innate", "learned", "currently", "lifestyle"):
+        assert len(ia[k].split()) == len(ib[k].split()), k
+
+
+def test_render_iss_delta_zero_identical_except_name():
+    a, b = pf.perturb("house-rivera", 0.0)
+    ctx = dict(house="the Rivera household",
+               living_area="the Ville:Rivera household:main room", vocation="barista")
+    ia = pf.render_iss(a, name="Ada Rivera", **ctx)
+    ib = pf.render_iss(b, name="Ada Rivera", **ctx)
+    assert ia == ib
