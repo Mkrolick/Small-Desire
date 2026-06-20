@@ -88,9 +88,22 @@ def execute(persona, maze, personas, plan):
       # Retrieve the target addresses. Again, plan is an action address in its
       # string form. <maze.address_tiles> takes this and returns candidate 
       # coordinates. 
-      if plan not in maze.address_tiles: 
-        maze.address_tiles["Johnson Park:park:park garden"] #ERRORRRRRRR
-      else: 
+      if plan not in maze.address_tiles:
+        # gpt-5.4 occasionally emits an action address the maze can't resolve
+        # (the upstream code hard-crashed here with a sentinel KeyError). Degrade
+        # gracefully: walk back to the coarsest valid prefix of the address
+        # (sector/arena usually resolve even when the object doesn't); if nothing
+        # resolves, stay at the current tile and re-plan next step.
+        target_tiles = None
+        parts = plan.split(":")
+        for k in range(len(parts) - 1, 0, -1):
+          prefix = ":".join(parts[:k])
+          if prefix in maze.address_tiles:
+            target_tiles = maze.address_tiles[prefix]
+            break
+        if target_tiles is None:
+          target_tiles = [persona.scratch.curr_tile]
+      else:
         target_tiles = maze.address_tiles[plan]
 
     # There are sometimes more than one tile returned from this (e.g., a tabe
