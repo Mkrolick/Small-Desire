@@ -208,3 +208,24 @@ def make_pair_base(seed_id, delta, out_name, name_a, name_b,
     _write_json(env_path, env)
 
     return [name_a, name_b]
+
+
+def same_house(base_path):
+    """True iff every persona in the materialized base lives in the same sector."""
+    sectors = set()
+    personas_dir = f"{base_path}/personas"
+    for name in os.listdir(personas_dir):
+        if name.startswith("."):
+            continue
+        la = _read_json(f"{personas_dir}/{name}/bootstrap_memory/scratch.json").get("living_area", "")
+        parts = la.split(":")
+        sectors.add(parts[1] if len(parts) > 1 else la)
+    return len(sectors) == 1
+
+
+def make_copresent_pair(seed_id, delta, out_name, name_a, name_b, vocation="barista"):
+    """Materialize a (seed, delta) pair sharing the dorm (co-present)."""
+    return make_pair_base(seed_id, delta, out_name, name_a, name_b,
+                          house="the dorm", vocation=vocation,
+                          template_base=CO_PRESENCE_TEMPLATE,
+                          template_personas=CO_PRESENCE_PERSONAS)

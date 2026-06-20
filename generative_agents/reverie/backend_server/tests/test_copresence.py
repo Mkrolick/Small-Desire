@@ -47,3 +47,27 @@ def test_make_pair_base_rejects_mismatched_template_args():
         pf.make_pair_base("seed", 0.3, out_name="base_gen_should_not_exist",
                           name_a="A B", name_b="C D",
                           template_base=pf.CO_PRESENCE_TEMPLATE)  # personas omitted -> error
+
+
+def test_make_copresent_pair_and_same_house():
+    out = "base_gen_copres_helper"
+    folder = f"{fs_storage}/{out}"
+    shutil.rmtree(folder, ignore_errors=True)
+    try:
+        pf.make_copresent_pair("house-okafor", 0.6, out_name=out,
+                               name_a="Cy Okafor", name_b="Dee Okafor")
+        assert pf.same_house(folder) is True
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
+def test_same_house_false_for_single_home_template():
+    out = "base_gen_singlehome"
+    folder = f"{fs_storage}/{out}"
+    shutil.rmtree(folder, ignore_errors=True)
+    try:
+        pf.make_pair_base("house-rivera", 0.4, out_name=out,
+                          name_a="Ada Rivera", name_b="Bea Rivera")   # default single-home template
+        assert pf.same_house(folder) is False   # apartment vs dorm -> different sectors
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
