@@ -458,13 +458,17 @@ def run_gpt_prompt_task_decomp(persona,
 
   fin_output = []
   time_sum = 0
-  for i_task, i_duration in output: 
+  for item in output:
+    # gpt-5.4 may emit a decomp element that isn't a (task, duration) pair; skip it.
+    if not (isinstance(item, (list, tuple)) and len(item) == 2):
+      continue
+    i_task, i_duration = item
+    if not isinstance(i_duration, (int, float)):
+      continue
     time_sum += i_duration
-    # HM?????????
-    # if time_sum < duration: 
-    if time_sum <= duration: 
+    if time_sum <= duration:
       fin_output += [[i_task, i_duration]]
-    else: 
+    else:
       break
   ftime_sum = 0
   for fi_task, fi_duration in fin_output: 
