@@ -142,3 +142,36 @@ def test_probe_relationships_logs_each_ordered_pair(monkeypatch):
     assert {(l["from"], l["to"]) for l in lines} == set(calls)
     import shutil
     shutil.rmtree(f"{instrumentation.fs_storage}/{sim}", ignore_errors=True)
+
+
+def test_run_headless_instrumented_writes_measurements(monkeypatch):
+    import shutil
+    import reverie
+    import headless
+    import instrumentation as instr
+
+    sim = "test_instrumented_run"
+    folder = f"{instr.fs_storage}/{sim}"
+    shutil.rmtree(folder, ignore_errors=True)
+
+    monkeypatch.setattr(instr, "new_retrieve", lambda persona, fp, n_count=30: {fp[0]: []})
+    monkeypatch.setattr(instr.converse, "generate_summarize_agent_relationship",
+                        lambda a, b, retrieved: f"{a.scratch.name}->{b.scratch.name}")
+
+    orig_init = reverie.ReverieServer.__init__
+    def patched_init(self, fork, sim_code):
+        orig_init(self, fork, sim_code)
+        for p in self.personas.values():
+            monkeypatch.setattr(p, "move", lambda maze, personas, tile, t: ((1, 2), "S", "idle @ home"))
+    monkeypatch.setattr(reverie.ReverieServer, "__init__", patched_init)
+    monkeypatch.setattr(reverie.ReverieServer, "save", lambda self: None)
+
+    headless.run_headless_instrumented("base_the_ville_isabella_maria", sim, 2, probe_every=1)
+
+    import json as _json
+    rel = [_json.loads(l) for l in open(f"{folder}/measurements/relationship_summary.jsonl")]
+    assert len(rel) == 4  # 2 ordered pairs x 2 steps
+    assert all(r["source"] == "probe" for r in rel)
+    assert {(r["from"], r["to"]) for r in rel} == {
+        ("Isabella Rodriguez", "Maria Lopez"), ("Maria Lopez", "Isabella Rodriguez")}
+    shutil.rmtree(folder, ignore_errors=True)
