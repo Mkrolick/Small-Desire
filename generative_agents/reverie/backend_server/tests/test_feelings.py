@@ -71,3 +71,20 @@ def test_run_headless_instrumented_writes_feelings(monkeypatch):
     assert len(feelings) == 4   # 2 ordered pairs x 2 steps
     assert all(f["score"] == 5 for f in feelings)
     shutil.rmtree(folder, ignore_errors=True)
+
+
+def test_probe_feelings_survives_provider_hiccup(monkeypatch):
+    # a TokensPLS hiccup mid-run must degrade to a null score, not crash the run
+    sim = "test_feelings_hiccup"
+    log = instr.MeasurementLog(sim)
+    monkeypatch.setattr(instr, "new_retrieve", lambda persona, fp, n_count=30: {fp[0]: []})
+    def boom(prompt, **kw):
+        raise ConnectionError("TokensPLS down")
+    monkeypatch.setattr(instr.provider_client, "chat_completion", boom)
+    personas = {"Ada Rivera": _fake_persona("Ada Rivera"), "Bea Rivera": _fake_persona("Bea Rivera")}
+    instr.probe_feelings(personas, log, step=1,
+                         curr_time=__import__("datetime").datetime(2023, 2, 13, 0, 0, 0))
+    import json, shutil
+    lines = [json.loads(l) for l in open(f"{instr.fs_storage}/{sim}/measurements/feeling.jsonl")]
+    assert len(lines) == 2 and all(l["score"] is None for l in lines)
+    shutil.rmtree(f"{instr.fs_storage}/{sim}", ignore_errors=True)

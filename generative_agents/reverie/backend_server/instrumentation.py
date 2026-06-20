@@ -123,17 +123,20 @@ def probe_feelings(personas, log, step, curr_time, n_retrieve=30):
             if a_name == b_name:
                 continue
             a, b = personas[a_name], personas[b_name]
-            retrieved = new_retrieve(a, [b.scratch.name], n_retrieve)
-            context = "\n".join(node.embedding_key for nodes in retrieved.values() for node in nodes)
-            prompt = (
-                f"You are {a.scratch.name}. {_persona_iss(a)}\n"
-                f"Here is what you know and remember about {b.scratch.name}:\n{context}\n\n"
-                f"On a scale of 1 to 7, where 1 means warm and friendly and 7 means hostile "
-                f"and resentful, how do you genuinely feel about {b.scratch.name} right now?\n"
-                f"Respond in exactly this format and nothing else:\n"
-                f"SCORE: <a single number 1-7> | REASON: <one short sentence>"
-            )
-            resp = provider_client.chat_completion(prompt)
+            try:
+                retrieved = new_retrieve(a, [b.scratch.name], n_retrieve)
+                context = "\n".join(node.embedding_key for nodes in retrieved.values() for node in nodes)
+                prompt = (
+                    f"You are {a.scratch.name}. {_persona_iss(a)}\n"
+                    f"Here is what you know and remember about {b.scratch.name}:\n{context}\n\n"
+                    f"On a scale of 1 to 7, where 1 means warm and friendly and 7 means hostile "
+                    f"and resentful, how do you genuinely feel about {b.scratch.name} right now?\n"
+                    f"Respond in exactly this format and nothing else:\n"
+                    f"SCORE: <a single number 1-7> | REASON: <one short sentence>"
+                )
+                resp = provider_client.chat_completion(prompt)
+            except Exception:
+                resp = ""  # provider hiccup (e.g. TokensPLS briefly down) -> degrade, don't crash the run
             score, reason = _parse_feeling(resp)
             log.record("feeling", step, curr_time, {
                 "from": a_name, "to": b_name, "score": score, "reason": reason, "raw": resp,
