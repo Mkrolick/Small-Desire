@@ -2,9 +2,14 @@
 identity distance delta (the experiment's IV). Deterministic per seed.
 """
 import hashlib
+import json
 import math
+import os
+import shutil
 
+from global_methods import copyanything
 from persona.prompt_template import provider_client
+from utils import fs_storage
 
 TRAITS = ["warmth", "ambition", "dominance", "agreeableness",
           "conscientiousness", "openness", "sociability", "volatility"]
@@ -118,3 +123,84 @@ def manipulation_check(seed_id, delta, name_a, name_b, house, living_area, vocat
         "trait_distance": trait_distance(a, b),
         "embedding_distance": embedding_distance(ia, ib),
     }
+
+
+_TEMPLATE_BASE = "base_the_ville_isabella_maria"
+_TEMPLATE_PERSONAS = ["Isabella Rodriguez", "Maria Lopez"]
+
+
+def _read_json(path):
+    with open(path) as f:
+        return json.load(f)
+
+
+def _write_json(path, obj):
+    with open(path, "w") as f:
+        json.dump(obj, f, indent=2)
+
+
+def make_pair_base(seed_id, delta, out_name, name_a, name_b,
+                   house=None, vocation="barista"):
+    """Clone the template base into storage/<out_name> and overwrite its two
+    personas with a generated (seed, delta) pair. Renames the personas
+    everywhere they are name-embedded (folders, scratch, meta, env, and the
+    spatial-memory sector/arena keys) so the generated base is runnable.
+    Returns the two names."""
+    house = house or f"the {name_a.split()[-1]} household"
+    src = f"{fs_storage}/{_TEMPLATE_BASE}"
+    dst = f"{fs_storage}/{out_name}"
+    shutil.rmtree(dst, ignore_errors=True)
+    copyanything(src, dst)
+
+    name_map = {_TEMPLATE_PERSONAS[0]: name_a, _TEMPLATE_PERSONAS[1]: name_b}
+
+    # Two-phase rename (avoids collisions if a new name equals a template name).
+    tmp_names = {old: f"__tmp_{i}__" for i, old in enumerate(_TEMPLATE_PERSONAS)}
+    for old, tmp in tmp_names.items():
+        os.rename(f"{dst}/personas/{old}", f"{dst}/personas/{tmp}")
+    for old, new in name_map.items():
+        os.rename(f"{dst}/personas/{tmp_names[old]}", f"{dst}/personas/{new}")
+
+    a, b = perturb(seed_id, delta)
+    traits_for = {name_a: a, name_b: b}
+
+    for new_name, traits in traits_for.items():
+        pdir = f"{dst}/personas/{new_name}"
+
+        # Remap name-embedded keys in spatial memory (e.g. "Maria Lopez's room"
+        # -> "<name_b>'s room") so the planner's last_name-in-arena access filter
+        # finds the persona's own home.
+        sm_path = f"{pdir}/bootstrap_memory/spatial_memory.json"
+        with open(sm_path) as f:
+            sm_text = f.read()
+        for old, new in name_map.items():
+            sm_text = sm_text.replace(old, new)
+        with open(sm_path, "w") as f:
+            f.write(sm_text)
+
+        # Overwrite identity fields; remap the living_area path to the renamed tree.
+        scratch_path = f"{pdir}/bootstrap_memory/scratch.json"
+        scratch = _read_json(scratch_path)
+        living_area = scratch.get("living_area") or ""
+        for old, new in name_map.items():
+            living_area = living_area.replace(old, new)
+        if not living_area:
+            living_area = f"the Ville:{name_a.split()[-1]} household:common room"
+        iss = render_iss(traits, name=new_name, house=house,
+                         living_area=living_area, vocation=vocation)
+        scratch.update(iss)
+        scratch["act_event"] = [new_name, None, None]
+        _write_json(scratch_path, scratch)
+
+    meta_path = f"{dst}/reverie/meta.json"
+    meta = _read_json(meta_path)
+    meta["persona_names"] = [name_a, name_b]
+    meta["fork_sim_code"] = out_name
+    _write_json(meta_path, meta)
+
+    env_path = f"{dst}/environment/0.json"
+    env = _read_json(env_path)
+    env = {name_map.get(k, k): v for k, v in env.items()}
+    _write_json(env_path, env)
+
+    return [name_a, name_b]

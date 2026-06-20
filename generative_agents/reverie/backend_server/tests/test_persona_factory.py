@@ -95,3 +95,33 @@ def test_embedding_distance_and_manipulation_check(monkeypatch):
     assert set(chk.keys()) >= {"designed_delta", "trait_distance", "embedding_distance"}
     assert chk["designed_delta"] == 0.6
     assert chk["trait_distance"] > 0.0
+
+
+def test_make_pair_base_writes_consistent_base():
+    import json
+    import os
+    import shutil
+    from utils import fs_storage
+
+    out = "base_gen_test_pair"
+    folder = f"{fs_storage}/{out}"
+    shutil.rmtree(folder, ignore_errors=True)
+    names = pf.make_pair_base("house-rivera", 0.0, out_name=out,
+                              name_a="Ada Rivera", name_b="Bea Rivera")
+    assert set(names) == {"Ada Rivera", "Bea Rivera"}
+    meta = json.load(open(f"{folder}/reverie/meta.json"))
+    assert set(meta["persona_names"]) == {"Ada Rivera", "Bea Rivera"}
+    env = json.load(open(f"{folder}/environment/0.json"))
+    assert set(env.keys()) == {"Ada Rivera", "Bea Rivera"}
+    dirs = {d for d in os.listdir(f"{folder}/personas") if not d.startswith(".")}
+    assert dirs == {"Ada Rivera", "Bea Rivera"}
+    sa = json.load(open(f"{folder}/personas/Ada Rivera/bootstrap_memory/scratch.json"))
+    sb = json.load(open(f"{folder}/personas/Bea Rivera/bootstrap_memory/scratch.json"))
+    assert sa["name"] == "Ada Rivera" and "barista" in sa["learned"]
+    assert sb["name"] == "Bea Rivera" and "barista" in sb["learned"]   # cross-wiring guard
+    assert sa["innate"] == sb["innate"]                                # delta=0 -> identical traits
+    # spatial memory remapped: template names gone, new names present, access-filter consistency
+    sm_b = open(f"{folder}/personas/Bea Rivera/bootstrap_memory/spatial_memory.json").read()
+    assert "Maria Lopez" not in sm_b and "Bea Rivera" in sm_b
+    assert sb["last_name"] in sb["living_area"]                        # planner's last_name-in-arena will match
+    shutil.rmtree(folder, ignore_errors=True)
