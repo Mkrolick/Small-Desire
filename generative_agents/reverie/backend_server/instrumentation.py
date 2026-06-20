@@ -85,9 +85,16 @@ def capture_conversations(movements, log, step, curr_time):
 
 
 def _persona_iss(persona):
-    """The persona's identity block if available (real personas have get_str_iss)."""
+    """The persona's identity block if available (real personas have get_str_iss).
+    Returns empty string if unavailable or if the scratch state is incomplete
+    (e.g. curr_time not yet set before first move)."""
     getter = getattr(persona.scratch, "get_str_iss", None)
-    return getter() if callable(getter) else ""
+    if not callable(getter):
+        return ""
+    try:
+        return getter()
+    except Exception:
+        return ""
 
 
 def _parse_feeling(text):

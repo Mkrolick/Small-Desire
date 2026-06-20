@@ -43,3 +43,31 @@ def test_probe_feelings_logs_both_directions(monkeypatch):
     assert any("Ada Rivera" in p and "Bea Rivera" in p for p in calls)
     import shutil
     shutil.rmtree(f"{instr.fs_storage}/{sim}", ignore_errors=True)
+
+
+def test_run_headless_instrumented_writes_feelings(monkeypatch):
+    import shutil
+    import reverie
+    import headless
+    sim = "test_feelings_run"
+    folder = f"{instr.fs_storage}/{sim}"
+    shutil.rmtree(folder, ignore_errors=True)
+
+    monkeypatch.setattr(instr, "new_retrieve", lambda persona, fp, n_count=30: {fp[0]: []})
+    monkeypatch.setattr(instr.converse, "generate_summarize_agent_relationship",
+                        lambda a, b, retrieved: "summary")
+    monkeypatch.setattr(instr.provider_client, "chat_completion",
+                        lambda prompt, **kw: "SCORE: 5 | REASON: tense")
+    monkeypatch.setattr(reverie.ReverieServer, "save", lambda self: None)
+    orig_init = reverie.ReverieServer.__init__
+    def patched_init(self, fork, sim_code):
+        orig_init(self, fork, sim_code)
+        for p in self.personas.values():
+            monkeypatch.setattr(p, "move", lambda maze, personas, tile, t: ((1, 2), "S", "idle @ home"))
+    monkeypatch.setattr(reverie.ReverieServer, "__init__", patched_init)
+
+    headless.run_headless_instrumented("base_the_ville_isabella_maria", sim, 2, probe_every=1)
+    feelings = [__import__("json").loads(l) for l in open(f"{folder}/measurements/feeling.jsonl")]
+    assert len(feelings) == 4   # 2 ordered pairs x 2 steps
+    assert all(f["score"] == 5 for f in feelings)
+    shutil.rmtree(folder, ignore_errors=True)

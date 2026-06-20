@@ -63,6 +63,7 @@ def run_headless_instrumented(fork_sim_code, sim_code, n_steps, probe_every=1):
         instrumentation.capture_conversations(movements, log, step, step_time)
         if probe_every and (i % probe_every == 0):
             instrumentation.probe_relationships(rs.personas, log, step, step_time)
+            instrumentation.probe_feelings(rs.personas, log, step, step_time)
         env = next_env_from_movements(movements)
     rs.save()
     return rs
