@@ -33,6 +33,25 @@ We deliberately tested **doubling without a contested object** (your design call
 - **Conversation initiation is stochastic.** The same seed gave 202 convos in the pilot and 0 in the long-horizon run — LLM nondeterminism in "decide to talk." So per-run convo counts are noisy (explains the 86/0/202/375/0 spread); the *attitude* finding (always warm/neutral, never hostile) is the stable signal, not the raw convo count.
 - **Coarse measures** — 1–7 self-report; small n; the co-location sampler was too coarse in the multi-seed run (fixed to arena-level + finer sampling in the pilot).
 
+## Update — turn-level mirroring + a 5.5-sim-day arc (the proper tests)
+
+Two follow-ups closed the two biggest holes (timescale, and the confounded reciprocity DV):
+
+**Timescale objection: answered.** A forced-contact run reached **Saturday — ~5.5 sim-days**. Both conditions warm *monotonically*; the warmest point is the **very end** (doubles → 1.25, divergent → 1.0 on the 1–7 warm-low scale). No peak-and-reverse, no deterioration. The honeymoon doesn't end, it deepens. (Per-sim-day wall-time held ~40 min, so memory bloat is mild — multi-week is feasible if ever needed.)
+
+**A proper mirroring metric** (`conversation_mirroring.py`) replaces the confounded reciprocity: per-turn valence (−3..+3 via LLM), **baseline-controlled** lag-1 cross-speaker correlation — true mimesis, undefined when nobody talks. On the long-arc transcripts:
+
+| | mimetic mirroring (baseline-ctrl) | within-convo escalation | valence | turns/convo |
+|---|---|---|---|---|
+| **doubles (δ0)**, n=17 | **0.01** (none) | ~0 (see below) | +1.77 warm | 5 |
+| **divergent (δ.9)**, n=40 | **0.68** (strong) | +0.17 (warms) | +1.32 warm | 7 |
+
+- **The mimetic coupling is in the *different* pair, not the doubles — the inverse of Girard.** Identical agents don't couple (0.01); they run in parallel. Different agents genuinely engage and their tone tracks the other's (0.68), warmly.
+- **A false alarm, corrected by reading transcripts:** doubles first scored "94% of conversations sour." But the transcripts are uniformly pleasant ("Morning, Bea. Sleep okay?" … "Quiet mornings are better than rushing them"); the negative slope is an artifact of *short* (5-turn) small-talk that opens with a warm greeting and closes on mundane logistics. No friction, no deterioration.
+- **Mechanism:** sameness → nothing new to exchange → short, shallow, pleasant small-talk → no engagement → no coupling. Difference → substantive things to share → longer engaged dialogue → mimetic coupling → warming.
+
+**So the double doesn't become a rival — it becomes *boring*.** In this substrate, sameness breeds disengagement (indifference), not violence. That inverts Girard on both axes we can now measure properly (no antagonistic mimesis; the mimesis that exists is warm and lives between *differentiated* agents). The RLHF/pro-sociality confound remains the deepest caveat, and doubles n=17 is thin.
+
 ## Recommended next steps — your call
 
 1. **Add a contested scarce object/role** (one job, one mentor's approval, one room) both want — the most likely lever to elicit rivalry per Girard, and what this data implies is missing. *(Revisits the framing we set aside — but now with evidence for why.)*
