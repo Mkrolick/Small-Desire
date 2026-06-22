@@ -52,6 +52,31 @@ Two follow-ups closed the two biggest holes (timescale, and the confounded recip
 
 **So the double doesn't become a rival — it becomes *boring*.** In this substrate, sameness breeds disengagement (indifference), not violence. That inverts Girard on both axes we can now measure properly (no antagonistic mimesis; the mimesis that exists is warm and lives between *differentiated* agents). The RLHF/pro-sociality confound remains the deepest caveat, and doubles n=17 is thin.
 
+## Update 2 — the contested-object condition (`object_condition_results.md`)
+
+Re-introduced the scarce object Girard requires: one indivisible prize (the single house-musician spot at Hobbs Cafe's piano), appended byte-identically to both agents' self-concept (δ=0 preserved, verified), forced-contact and seed (`arc-1`) held identical to the no-object null — the *only* change is the object. No hostility scripted (every want points at the piano). 5 cells × 5.5 sim-days.
+
+| condition | private feeling (1=warm,7=hostile) | escalation | conversations |
+|---|---|---|---|
+| no-object null (δ0) | warms to **1.25** | — | 17 |
+| **scarce object (δ0)** | flat at **~5.0** (wary) | none | **0** |
+| **scarce object (δ.9)** | ~5.0 | none | 0 |
+| non-scarce control (δ0) | warm **~2–3** | none | 0 |
+
+**The first non-warm signal — and it's scarcity-specific.** With the contested object, private feeling sits at ~5 (cool/guarded) vs the null's warm 1.25; the **non-scarce control** (same piano, "anyone can play") stayed warm ~2–3, so it's the *zero-sum contest*, not merely a shared goal, that cools them. The data's prior implication — that the object is load-bearing — is confirmed: with it, they are no longer warm. The feeling "why" strings are coherent: *"Bea is my direct rival for the Hobbs piano spot and that keeps things tense."*
+
+**But it is *not* Girardian doubling — it's rational cold competition.** Every doubling-specific signature is absent:
+- **No escalation.** Feeling is flat at ~5 *from step 0* — a premise-set wary baseline, not a rivalry that builds. Over 5.5 days it never climbs toward hostility (7).
+- **No objectlessness.** The reasons stay *object-anchored* throughout ("rival **for the piano spot**", "the one thing I'm working to win") — they never decay into the circular, person-fixated *"I can't stand her"* that is the core doubling prediction. The object never fades.
+- **No sameness-amplification.** Doubles (δ0) ≈ divergent (δ.9), both ~5 — scarcity cools *anyone*, identity-similarity adds nothing. Girard's specific claim (doubling intensifies it) fails.
+- **No confrontation.** They stay "polite," even "respect her discipline" — guarded, never antagonistic.
+
+**Two honest caveats, one of them my design flaw:**
+1. **0 conversations is a confound I introduced.** The object's `daily_plan_req` ("practice and be heard") routed both agents off to pursue the piano *separately* → co-location dropped to **0%** (null was 10%) → no transcripts. Both scarce and non-scarce cells lost co-presence, so it's a schedule artifact, *not* rivalry-driven avoidance. The behavioral channel is therefore dark — the whole signal is private self-report.
+2. **The probe re-reads the premise.** The injected "she's my rival" clause is in the feeling-probe context, so part of the ~5 is mechanical. The non-scarce control (same premise, warm) shows scarcity adds real cooling *beyond* that — but the elevation is not purely emergent.
+
+**Net:** a contested scarce object installs stable, object-anchored, competitive *wariness* — but not the escalating, objectless, mimetic antagonism of doubling. The falsifiable doubling prediction the user cared about (circular "I hate him because I hate him") does **not** appear even *with* the object. And the agents stay relentlessly polite — the civility floor again. The decisive remaining test is lever #2: a less-aligned model. Plus a fix: keep co-presence intact under the object (don't let the schedule scatter them) so the *behavioral* channel isn't dark.
+
 ## Recommended next steps — your call
 
 1. **Add a contested scarce object/role** (one job, one mentor's approval, one room) both want — the most likely lever to elicit rivalry per Girard, and what this data implies is missing. *(Revisits the framing we set aside — but now with evidence for why.)*
